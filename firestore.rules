@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: customers
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (optional, email format)
+    //   - phone: string (required)
+    //   - address: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: machines
+    // Fields:
+    //   - brand: string (required)
+    //   - model: string (required)
+    //   - serialNumber: string (required)
+    //   - type: string (required, enum)
+    //   - customerId: string (required, ref to customers)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: serviceOrders
+    // Fields:
+    //   - machineId: string (required)
+    //   - customerId: string (required)
+    //   - description: string (required)
+    //   - status: string (required, enum)
+    //   - priority: string (required, enum)
+    //   - cost: number (optional)
+    //   - notes: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "roqueluis6543@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidCustomer(data) {
+      return hasRequiredFields(['name', 'ci', 'phone', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.ci is string && data.ci.size() > 0 && data.ci.size() < 20 &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() < 20 &&
+             (!('email' in data) || isValidEmail(data.email)) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPart(data) {
+      return hasRequiredFields(['name', 'sku', 'stock', 'price', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.sku is string && data.sku.size() > 0 &&
+             data.stock is number &&
+             data.price is number &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSupplier(data) {
+      return hasRequiredFields(['name']) &&
+             data.name is string && data.name.size() > 0;
+    }
+
+    function isValidMachine(data) {
+      return hasRequiredFields(['brand', 'model', 'serialNumber', 'type', 'customerId', 'createdAt']) &&
+             data.brand is string && data.brand.size() > 0 &&
+             data.model is string && data.model.size() > 0 &&
+             data.serialNumber is string && data.serialNumber.size() > 0 &&
+             data.type in ['scrubber', 'vacuum', 'pressure-washer', 'sweeper', 'other'] &&
+             data.customerId is string &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidServiceOrder(data) {
+      return hasRequiredFields(['machineId', 'customerId', 'description', 'status', 'priority', 'createdAt', 'updatedAt']) &&
+             data.machineId is string &&
+             data.customerId is string &&
+             data.description is string && data.description.size() > 0 &&
+             data.status in ['pending', 'diagnosing', 'budget-pending', 'waiting-approval', 'in-repair', 'completed', 'delivered'] &&
+             data.priority in ['low', 'medium', 'high', 'urgent'] &&
+             (!('diagnosis' in data) || data.diagnosis is string) &&
+             (!('budget' in data) || data.budget is map) &&
+             (!('budgetStatus' in data) || data.budgetStatus in ['none', 'pending', 'approved', 'rejected']) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidCustomer(request.resource.data);
+      allow update: if isAdmin() && isValidCustomer(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /parts/{partId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidPart(request.resource.data);
+      allow update: if isAdmin() && isValidPart(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidSupplier(request.resource.data);
+      allow update: if isAdmin() && isValidSupplier(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /machines/{machineId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidMachine(request.resource.data);
+      allow update: if isAdmin() && isValidMachine(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /serviceOrders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidServiceOrder(request.resource.data);
+      allow update: if isAdmin() && isValidServiceOrder(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

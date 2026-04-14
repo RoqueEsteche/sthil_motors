@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "Customer": {
+      "title": "Customer",
+      "description": "Information about a customer who owns cleaning machinery.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the customer or company." },
+        "ci": { "type": "string", "description": "Cédula de Identidad or RUC." },
+        "email": { "type": "string", "format": "email", "description": "Contact email." },
+        "phone": { "type": "string", "description": "Contact phone number." },
+        "address": { "type": "string", "description": "Physical address." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." }
+      },
+      "required": ["name", "ci", "phone"]
+    },
+    "Part": {
+      "title": "Part",
+      "description": "Spare parts and items in inventory.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "sku": { "type": "string", "description": "Stock Keeping Unit / Code" },
+        "stock": { "type": "number" },
+        "minStock": { "type": "number", "description": "Threshold for low stock alerts." },
+        "price": { "type": "number" },
+        "supplierId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "sku", "stock", "price"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Providers of parts and machinery.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contact": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Machine": {
+      "title": "Machine",
+      "description": "A cleaning machine registered in the workshop.",
+      "type": "object",
+      "properties": {
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "type": { "type": "string", "enum": ["scrubber", "vacuum", "pressure-washer", "sweeper", "other"] },
+        "customerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["brand", "model", "serialNumber", "customerId"]
+    },
+    "ServiceOrder": {
+      "title": "Service Order",
+      "description": "A repair or maintenance request for a machine.",
+      "type": "object",
+      "properties": {
+        "machineId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "machineSnapshot": {
+          "type": "object",
+          "properties": {
+            "brand": { "type": "string" },
+            "model": { "type": "string" },
+            "serialNumber": { "type": "string" },
+            "accessories": { "type": "string", "description": "Free text for accessories brought with the machine." },
+            "observations": { "type": "string", "description": "Initial state or observations." }
+          }
+        },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "diagnosing", "budget-pending", "waiting-approval", "in-repair", "completed", "delivered"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "diagnosis": { "type": "string", "description": "Technical diagnosis performed by the mechanic." },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "labor": { "type": "number" },
+            "parts": { "type": "array", "items": { "type": "object", "properties": { "partId": { "type": "string" }, "name": { "type": "string" }, "quantity": { "type": "number" }, "price": { "type": "number" } } } },
+            "total": { "type": "number" }
+          }
+        },
+        "budgetStatus": { "type": "string", "enum": ["none", "pending", "approved", "rejected"] },
+        "emailSent": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["machineId", "customerId", "description", "status"]
+    }
+  },
+  "firestore": {
+    "/customers/{customerId}": { "schema": "Customer", "description": "Workshop customers." },
+    "/parts/{partId}": { "schema": "Part", "description": "Inventory items." },
+    "/suppliers/{supplierId}": { "schema": "Supplier", "description": "Parts providers." },
+    "/machines/{machineId}": { "schema": "Machine", "description": "Registered machines." },
+    "/serviceOrders/{orderId}": { "schema": "ServiceOrder", "description": "Service and repair orders." }
+  }
+}

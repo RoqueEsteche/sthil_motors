@@ -1,0 +1,6 @@
+{
+  "name": "Stihl Motors Management",
+  "description": "Sistema integral de gestión para Stihl Motors: Inventario, POS, Órdenes de Trabajo y Reportes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
